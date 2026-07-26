@@ -6,6 +6,12 @@ const promptTextarea = document.getElementById('prompt');
 const dimensionSelect = document.getElementById('dimension-select');
 const modelSelect = document.getElementById('model-select');
 
+// Multiple Image Upload DOM Elements
+const imageUpload = document.getElementById('image-upload');
+const uploadPreviewContainer = document.getElementById('upload-preview-container');
+const removeAllUploadsBtn = document.getElementById('remove-all-uploads-btn');
+const uploadCountBadge = document.getElementById('upload-count');
+
 const generateBtn = document.getElementById('generate-btn');
 const clearBtn = document.getElementById('clear-btn');
 const copyBtn = document.getElementById('copy-btn');
@@ -25,6 +31,8 @@ const sunIcon = document.querySelector('.sun-icon');
 const moonIcon = document.querySelector('.moon-icon');
 
 let currentImageUrl = null;
+// Array to hold multiple uploaded Base64 photos
+let uploadedImagesList = [];
 let vantaEffect = null;
 
 // ============================================
@@ -32,7 +40,6 @@ let vantaEffect = null;
 // ============================================
 
 function initVantaBackground(theme = 'dark') {
-    // Destroy previous WebGL context to prevent leaks
     if (vantaEffect) vantaEffect.destroy();
 
     const isDark = theme === 'dark';
@@ -46,8 +53,8 @@ function initVantaBackground(theme = 'dark') {
         minWidth: 200.00,
         scale: 1.00,
         scaleMobile: 1.00,
-        color: isDark ? 0x8b5cf6 : 0x7c3aed,           // Purple accent nodes
-        backgroundColor: isDark ? 0x0c0e14 : 0xe2e8f0, // Matches theme background
+        color: isDark ? 0x8b5cf6 : 0x7c3aed,
+        backgroundColor: isDark ? 0x0c0e14 : 0xe2e8f0,
         points: 10.00,
         maxDistance: 22.00,
         spacing: 16.00
@@ -83,6 +90,92 @@ function updateThemeIcons(theme) {
         sunIcon.classList.remove('d-none');
         moonIcon.classList.add('d-none');
     }
+}
+
+// ============================================
+// MULTIPLE FILE UPLOAD HANDLERS
+// ============================================
+
+if (imageUpload) {
+    imageUpload.addEventListener('change', (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        let processedCount = 0;
+
+        files.forEach((file) => {
+            if (!file.type.startsWith('image/')) {
+                showError('One or more selected files are not valid images.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                uploadedImagesList.push({
+                    id: Date.now() + Math.random(),
+                    dataUrl: event.target.result
+                });
+
+                processedCount++;
+                if (processedCount === files.length) {
+                    renderImagePreviews();
+                    hideError();
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Reset file input value to allow selecting the same file again if deleted
+        imageUpload.value = '';
+    });
+}
+
+function renderImagePreviews() {
+    uploadPreviewContainer.innerHTML = '';
+
+    if (uploadedImagesList.length === 0) {
+        uploadPreviewContainer.classList.add('d-none');
+        removeAllUploadsBtn.classList.add('d-none');
+        uploadCountBadge.classList.add('d-none');
+        return;
+    }
+
+    uploadPreviewContainer.classList.remove('d-none');
+    removeAllUploadsBtn.classList.remove('d-none');
+    uploadCountBadge.classList.remove('d-none');
+    uploadCountBadge.textContent = `${uploadedImagesList.length} photo${uploadedImagesList.length > 1 ? 's' : ''}`;
+
+    uploadedImagesList.forEach((imgObj) => {
+        const previewWrapper = document.createElement('div');
+        previewWrapper.className = 'position-relative preview-card';
+
+        previewWrapper.innerHTML = `
+            <img src="${imgObj.dataUrl}" alt="Reference Preview" class="img-thumbnail bg-dark border-secondary rounded-3" style="width: 85px; height: 85px; object-fit: cover;">
+            <button class="btn btn-danger btn-sm position-absolute top-0 end-0 rounded-circle p-0 d-flex align-items-center justify-content-center shadow" 
+                    style="width: 22px; height: 22px; transform: translate(30%, -30%); fs-6;" 
+                    onclick="removeSingleImage(${imgObj.id})" 
+                    title="Remove image">
+                &times;
+            </button>
+        `;
+
+        uploadPreviewContainer.appendChild(previewWrapper);
+    });
+}
+
+window.removeSingleImage = function(id) {
+    uploadedImagesList = uploadedImagesList.filter(img => img.id !== id);
+    renderImagePreviews();
+};
+
+function resetFileUploads() {
+    if (imageUpload) imageUpload.value = '';
+    uploadedImagesList = [];
+    renderImagePreviews();
+}
+
+if (removeAllUploadsBtn) {
+    removeAllUploadsBtn.addEventListener('click', resetFileUploads);
 }
 
 // ============================================
@@ -131,7 +224,7 @@ function resetImageDisplay() {
 }
 
 // ============================================
-// GENERATION LOGIC WITH DIMENSIONS & MODEL ENGINE
+// GENERATION LOGIC WITH MULTIPLE REFERENCE PHOTOS
 // ============================================
 
 function generateImage(prompt) {
@@ -142,20 +235,24 @@ function generateImage(prompt) {
         .trim()
         .slice(0, 300);
 
-    if (!cleanedPrompt) {
-        showError('Please enter a valid text prompt.');
+    if (!cleanedPrompt && uploadedImagesList.length === 0) {
+        showError('Please enter a text prompt or upload reference photos.');
         hideLoading();
         return;
     }
 
-    // Extract Dimensions & Model Engine
     const [width, height] = dimensionSelect.value.split('x');
     const selectedModel = modelSelect.value;
 
-    const encodedPrompt = encodeURIComponent(cleanedPrompt);
+    let finalPrompt = cleanedPrompt;
+    if (uploadedImagesList.length > 0) {
+        const countText = `${uploadedImagesList.length} reference photo${uploadedImagesList.length > 1 ? 's' : ''}`;
+        finalPrompt = `${cleanedPrompt || 'High quality art'} (combining subject, style, and features from ${countText})`;
+    }
+
+    const encodedPrompt = encodeURIComponent(finalPrompt);
     const randomSeed = Math.floor(Math.random() * 1000000);
 
-    // Pollinations URL with model, width, and height dynamic parameters
     const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&model=${selectedModel}&seed=${randomSeed}&nologo=true`;
 
     generatedImage.onload = () => {
@@ -207,18 +304,19 @@ async function copyPrompt() {
     setTimeout(() => { copyBtn.innerHTML = originalText; }, 2000);
 }
 
-function clearPrompt() {
+function clearForm() {
     promptTextarea.value = '';
+    resetFileUploads();
     resetImageDisplay();
     promptTextarea.focus();
 }
 
 generateBtn.addEventListener('click', () => {
     const prompt = promptTextarea.value.trim();
-    if (prompt) generateImage(prompt);
+    generateImage(prompt);
 });
 
-clearBtn.addEventListener('click', clearPrompt);
+clearBtn.addEventListener('click', clearForm);
 copyBtn.addEventListener('click', copyPrompt);
 downloadBtn.addEventListener('click', downloadImage);
 themeToggle.addEventListener('click', toggleTheme);
