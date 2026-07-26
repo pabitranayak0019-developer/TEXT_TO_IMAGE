@@ -28,15 +28,16 @@ let currentImageUrl = null;
 let vantaEffect = null;
 
 // ============================================
-// 3D VANTA BACKGROUND INITIALIZATION
+// 3D VANTA NET BACKGROUND INITIALIZATION
 // ============================================
 
 function initVantaBackground(theme = 'dark') {
+    // Destroy previous WebGL context to prevent leaks
     if (vantaEffect) vantaEffect.destroy();
 
     const isDark = theme === 'dark';
 
-    vantaEffect = VANTA.DOTS({
+    vantaEffect = VANTA.NET({
         el: "#vanta-bg",
         mouseControls: true,
         touchControls: true,
@@ -45,11 +46,11 @@ function initVantaBackground(theme = 'dark') {
         minWidth: 200.00,
         scale: 1.00,
         scaleMobile: 1.00,
-        color: isDark ? 0x8b5cf6 : 0x7c3aed,
-        color2: isDark ? 0x6366f1 : 0x4f46e5,
-        backgroundColor: isDark ? 0x0c0e14 : 0xe2e8f0,
-        size: 3.5,
-        spacing: 35.0
+        color: isDark ? 0x8b5cf6 : 0x7c3aed,           // Purple accent nodes
+        backgroundColor: isDark ? 0x0c0e14 : 0xe2e8f0, // Matches theme background
+        points: 10.00,
+        maxDistance: 22.00,
+        spacing: 16.00
     });
 }
 
@@ -147,7 +148,7 @@ function generateImage(prompt) {
         return;
     }
 
-    // Extract Dimensions
+    // Extract Dimensions & Model Engine
     const [width, height] = dimensionSelect.value.split('x');
     const selectedModel = modelSelect.value;
 
@@ -222,4 +223,5 @@ copyBtn.addEventListener('click', copyPrompt);
 downloadBtn.addEventListener('click', downloadImage);
 themeToggle.addEventListener('click', toggleTheme);
 
+// Initialize on page load
 initializeTheme();
