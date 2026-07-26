@@ -21,7 +21,6 @@
    ============================================ */
 
 :root {
-    /* 3D Dark Mode Palette */
     --bg-main: #0c0e14;
     --card-bg: rgba(22, 26, 38, 0.7);
     --card-border-top: rgba(255, 255, 255, 0.15);
@@ -29,7 +28,6 @@
     --text-primary: #f8fafc;
     --text-secondary: #94a3b8;
     
-    /* 3D Shadows */
     --shadow-3d-card: 
         0 20px 40px rgba(0, 0, 0, 0.6),
         0 1px 0px var(--card-border-top) inset,
@@ -47,13 +45,11 @@
         inset 0 4px 8px rgba(0, 0, 0, 0.5),
         inset 0 -1px 1px rgba(255, 255, 255, 0.05);
 
-    /* Gradients */
     --accent-gradient: linear-gradient(180deg, #8b5cf6 0%, #6d28d9 100%);
     --sec-btn-gradient: linear-gradient(180deg, #242938 0%, #161a26 100%);
 }
 
 [data-bs-theme="light"] {
-    /* 3D Light Mode Palette */
     --bg-main: #e2e8f0;
     --card-bg: rgba(255, 255, 255, 0.75);
     --card-border-top: rgba(255, 255, 255, 0.9);
@@ -118,7 +114,7 @@ body.bg-main {
 }
 
 /* ============================================
-   3D NEUMORPHIC INPUT & SELECT AREA
+   3D NEUMORPHIC INPUT, SELECT & FILE AREA
    ============================================ */
 
 .form-class-custom {
@@ -136,7 +132,6 @@ body.bg-main {
     box-shadow: var(--inset-shadow-3d), 0 0 0 3px rgba(139, 92, 246, 0.3) !important;
 }
 
-/* Custom Dropdown Styling for Dimensions & Engines */
 select.form-class-custom {
     cursor: pointer;
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
@@ -153,6 +148,25 @@ select.form-class-custom option {
 [data-bs-theme="light"] select.form-class-custom option {
     background-color: #ffffff;
     color: #0f172a;
+}
+
+input[type="file"].form-class-custom::file-selector-button {
+    background: var(--sec-btn-gradient);
+    color: var(--text-primary);
+    border: 1px solid var(--card-border-top);
+    border-radius: 8px;
+    padding: 4px 12px;
+    margin-right: 12px;
+    cursor: pointer;
+}
+
+/* Multiple Image Preview Thumbnail Cards */
+.preview-card {
+    transition: transform 0.2s ease;
+}
+
+.preview-card:hover {
+    transform: scale(1.05);
 }
 
 /* ============================================
@@ -193,11 +207,6 @@ select.form-class-custom option {
     color: var(--text-primary) !important;
 }
 
-.btn-outline-secondary:active {
-    transform: translateY(1px);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
-}
-
 /* ============================================
    3D DISPLAY & CANVAS
    ============================================ */
@@ -231,10 +240,6 @@ select.form-class-custom option {
 .backdrop-blur:hover {
     transform: translateY(-2px) scale(1.05);
 }
-
-/* ============================================
-   UTILITIES
-   ============================================ */
 
 .min-vh-50 {
     min-height: 440px;
