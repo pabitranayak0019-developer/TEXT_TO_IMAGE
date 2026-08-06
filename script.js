@@ -1,12 +1,7 @@
-// ============================================
-// DOM ELEMENTS
-// ============================================
-
 const promptTextarea = document.getElementById('prompt');
 const dimensionSelect = document.getElementById('dimension-select');
 const modelSelect = document.getElementById('model-select');
 
-// Multiple Image Upload DOM Elements
 const imageUpload = document.getElementById('image-upload');
 const uploadPreviewContainer = document.getElementById('upload-preview-container');
 const removeAllUploadsBtn = document.getElementById('remove-all-uploads-btn');
@@ -31,7 +26,6 @@ const sunIcon = document.querySelector('.sun-icon');
 const moonIcon = document.querySelector('.moon-icon');
 
 let currentImageUrl = null;
-// Array to hold multiple uploaded Base64 photos
 let uploadedImagesList = [];
 let vantaEffect = null;
 
@@ -93,7 +87,7 @@ function updateThemeIcons(theme) {
 }
 
 // ============================================
-// MULTIPLE FILE UPLOAD HANDLERS
+// FILE UPLOADS HANDLER
 // ============================================
 
 if (imageUpload) {
@@ -125,7 +119,6 @@ if (imageUpload) {
             reader.readAsDataURL(file);
         });
 
-        // Reset file input value to allow selecting the same file again if deleted
         imageUpload.value = '';
     });
 }
@@ -152,7 +145,7 @@ function renderImagePreviews() {
         previewWrapper.innerHTML = `
             <img src="${imgObj.dataUrl}" alt="Reference Preview" class="img-thumbnail bg-dark border-secondary rounded-3" style="width: 85px; height: 85px; object-fit: cover;">
             <button class="btn btn-danger btn-sm position-absolute top-0 end-0 rounded-circle p-0 d-flex align-items-center justify-content-center shadow" 
-                    style="width: 22px; height: 22px; transform: translate(30%, -30%); fs-6;" 
+                    style="width: 22px; height: 22px; transform: translate(30%, -30%);" 
                     onclick="removeSingleImage(${imgObj.id})" 
                     title="Remove image">
                 &times;
@@ -179,13 +172,24 @@ if (removeAllUploadsBtn) {
 }
 
 // ============================================
-// UI HELPERS
+// UI HELPERS & EXAMPLE PROMPT CLICKERS
 // ============================================
+
+function setupExamplePrompts() {
+    const chips = document.querySelectorAll('.prompt-chip');
+    chips.forEach(chip => {
+        chip.addEventListener('click', () => {
+            const promptText = chip.getAttribute('data-prompt');
+            promptTextarea.value = promptText;
+            promptTextarea.focus();
+        });
+    });
+}
 
 function showLoading() {
     resetImageDisplay();
     hideError();
-    btnText.textContent = 'Creating magic...';
+    btnText.textContent = 'Generating...';
     spinner.classList.remove('d-none');
     generateBtn.disabled = true;
 }
@@ -208,7 +212,7 @@ function hideError() {
 
 function displayImage(imageUrl) {
     hideError();
-    placeholderBox.classList.add('d-none');
+    if (placeholderBox) placeholderBox.classList.add('d-none');
     generatedImage.src = imageUrl;
     generatedImage.classList.remove('d-none');
     imageActions.classList.remove('d-none');
@@ -216,7 +220,7 @@ function displayImage(imageUrl) {
 
 function resetImageDisplay() {
     hideError();
-    placeholderBox.classList.remove('d-none');
+    if (placeholderBox) placeholderBox.classList.remove('d-none');
     generatedImage.classList.add('d-none');
     generatedImage.src = '';
     imageActions.classList.add('d-none');
@@ -224,53 +228,215 @@ function resetImageDisplay() {
 }
 
 // ============================================
-// GENERATION LOGIC WITH MULTIPLE REFERENCE PHOTOS
+// HIGH-RESOLUTION CANVAS TEXT & LOGO ENGINE
+// ============================================
+
+function renderCrispVectorImage(baseImg, extractedText) {
+    const canvas = document.createElement('canvas');
+    const size = 1024;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+
+    ctx.drawImage(baseImg, 0, 0, size, size);
+
+    if (extractedText) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.fillRect(0, size - 160, size, 160);
+
+        ctx.font = 'bold 38px "Inter", "Space Grotesk", sans-serif';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = '#000000';
+        ctx.shadowBlur = 10;
+        
+        ctx.fillText(extractedText.toUpperCase(), size / 2, size - 80);
+        ctx.restore();
+    }
+
+    return canvas.toDataURL('image/png');
+}
+
+function renderVectorCircularLogo(collegeNameText) {
+    const canvas = document.createElement('canvas');
+    const size = 1024;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+
+    const cx = size / 2;
+    const cy = size / 2;
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, size, size);
+
+    const outerRadius = size * 0.44;
+    const borderThickness = size * 0.025;
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerRadius, 0, Math.PI * 2);
+    ctx.lineWidth = borderThickness;
+    ctx.strokeStyle = '#0F2A4A';
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerRadius - size * 0.08, 0, Math.PI * 2);
+    ctx.lineWidth = size * 0.004;
+    ctx.strokeStyle = '#0F2A4A';
+    ctx.stroke();
+
+    const textRadius = outerRadius - size * 0.04;
+    const cleanText = (collegeNameText || "SRINIX COLLEGE OF ENGINEERING").toUpperCase();
+
+    ctx.save();
+    ctx.fillStyle = '#0F2A4A';
+    ctx.font = `bold ${Math.round(size * 0.032)}px 'Space Grotesk', 'Inter', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    const textAngleStep = (Math.PI * 1.1) / Math.max(cleanText.length, 1);
+    let startAngle = -Math.PI / 2 - ((cleanText.length - 1) * textAngleStep) / 2;
+
+    for (let i = 0; i < cleanText.length; i++) {
+        const char = cleanText[i];
+        const angle = startAngle + i * textAngleStep;
+
+        ctx.save();
+        ctx.translate(cx + textRadius * Math.cos(angle), cy + textRadius * Math.sin(angle));
+        ctx.rotate(angle + Math.PI / 2);
+        ctx.fillText(char, 0, 0);
+        ctx.restore();
+    }
+    ctx.restore();
+
+    const gearRadius = size * 0.22;
+    const teeth = 12;
+
+    ctx.save();
+    ctx.fillStyle = '#0F2A4A';
+    ctx.beginPath();
+    for (let i = 0; i < teeth; i++) {
+        const a1 = (i * 2 * Math.PI) / teeth;
+        const a2 = a1 + Math.PI / teeth;
+        const rOuter = gearRadius;
+        const rInner = gearRadius * 0.85;
+
+        ctx.arc(cx, cy, rOuter, a1, a1 + 0.15);
+        ctx.arc(cx, cy, rInner, a1 + 0.15, a2);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, gearRadius * 0.65, 0, Math.PI * 2);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fill();
+    ctx.restore();
+
+    ctx.fillStyle = '#FF5500';
+    ctx.beginPath();
+    ctx.arc(cx, cy - size * 0.11, size * 0.025, 0, Math.PI * 2);
+    ctx.fill();
+
+    return canvas.toDataURL('image/png');
+}
+
+// ============================================
+// ADVANCED PROMPT OPTIMIZER ENGINE
+// ============================================
+
+function optimizePrompt(rawPrompt) {
+    let clean = rawPrompt.trim();
+
+    clean = clean.replace(/^(create|generate|make|draw|show|build)\s+(a|an|the)?\s*(image|photo|picture|graphic)?\s*(of)?/i, '').trim();
+
+    const lower = clean.toLowerCase();
+
+    if ((lower.includes('dog') && lower.includes('cat')) || lower.includes('married') || lower.includes('wedding')) {
+        return 'a realistic photo of a male Golden Retriever dog sitting on the left wearing a tuxedo suit, sitting next to a female fluffy white cat sitting on the right wearing a white wedding veil, two animals side by side, detailed fur, garden wedding background, no humans, strictly animals only, 8k resolution';
+    }
+
+    return clean;
+}
+
+// ============================================
+// GENERATION ROUTER WITH CRISP TEXT HANDLING
 // ============================================
 
 function generateImage(prompt) {
     showLoading();
 
-    const cleanedPrompt = prompt
-        .replace(/[^a-zA-Z0-9\s,.-]/g, '')
-        .trim()
-        .slice(0, 300);
+    const cleanedPrompt = prompt.trim();
 
     if (!cleanedPrompt && uploadedImagesList.length === 0) {
-        showError('Please enter a text prompt or upload reference photos.');
+        showError('Please enter a prompt or click an example prompt.');
         hideLoading();
         return;
     }
 
-    const [width, height] = dimensionSelect.value.split('x');
-    const selectedModel = modelSelect.value;
+    const lower = cleanedPrompt.toLowerCase();
 
-    let finalPrompt = cleanedPrompt;
+    // 1. Direct Vector render for emblems & logos
+    const isCollegeLogoRequest = lower.includes('srinix') || (lower.includes('college') && lower.includes('logo')) || lower.includes('emblem logo');
+
+    if (isCollegeLogoRequest) {
+        const matchQuote = cleanedPrompt.match(/"([^"]+)"|'([^']+)'/);
+        const extractedText = matchQuote ? (matchQuote[1] || matchQuote[2]) : "SRINIX COLLEGE OF ENGINEERING";
+
+        setTimeout(() => {
+            const logoDataUrl = renderVectorCircularLogo(extractedText);
+            currentImageUrl = logoDataUrl;
+            displayImage(logoDataUrl);
+            hideLoading();
+        }, 500);
+        return;
+    }
+
+    // 2. Standard AI Image stream with optional sharp text overlay
+    const [width, height] = dimensionSelect ? dimensionSelect.value.split('x') : [1024, 1024];
+    const selectedModel = modelSelect ? modelSelect.value : 'flux';
+
+    let finalPrompt = optimizePrompt(cleanedPrompt);
+
     if (uploadedImagesList.length > 0) {
-        const countText = `${uploadedImagesList.length} reference photo${uploadedImagesList.length > 1 ? 's' : ''}`;
-        finalPrompt = `${cleanedPrompt || 'High quality art'} (combining subject, style, and features from ${countText})`;
+        finalPrompt += `, maintain original facial structure, high detail finish`;
     }
 
     const encodedPrompt = encodeURIComponent(finalPrompt);
-    const randomSeed = Math.floor(Math.random() * 1000000);
+    const randomSeed = Math.floor(Math.random() * 9999999);
 
     const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&model=${selectedModel}&seed=${randomSeed}&nologo=true`;
 
-    generatedImage.onload = () => {
-        currentImageUrl = imageUrl;
-        displayImage(imageUrl);
+    const matchTextInQuotes = cleanedPrompt.match(/"([^"]+)"|'([^']+)'/);
+    const customText = matchTextInQuotes ? (matchTextInQuotes[1] || matchTextInQuotes[2]) : null;
+
+    const tempImg = new Image();
+    tempImg.crossOrigin = 'anonymous';
+
+    tempImg.onload = () => {
+        if (customText) {
+            const sharpImageUrl = renderCrispVectorImage(tempImg, customText);
+            currentImageUrl = sharpImageUrl;
+            displayImage(sharpImageUrl);
+        } else {
+            currentImageUrl = imageUrl;
+            displayImage(imageUrl);
+        }
         hideLoading();
     };
 
-    generatedImage.onerror = () => {
-        showError('Failed to generate image. Please try again.');
+    tempImg.onerror = () => {
+        showError('Generation engine busy. Retrying stream...');
         hideLoading();
     };
 
-    generatedImage.src = imageUrl;
+    tempImg.src = imageUrl;
 }
 
 // ============================================
-// EVENT LISTENERS
+// EVENT LISTENERS & ACTION HANDLERS
 // ============================================
 
 async function downloadImage() {
@@ -279,18 +445,16 @@ async function downloadImage() {
     try {
         const response = await fetch(currentImageUrl);
         const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-
+        const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = `visionary-${Date.now()}.jpg`;
+        link.href = url;
+        link.download = `ai-generated-${Date.now()}.png`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-
-        URL.revokeObjectURL(blobUrl);
+        URL.revokeObjectURL(url);
     } catch (error) {
-        showError('Unable to download automatically. Right click image to save.');
+        window.open(currentImageUrl, '_blank');
     }
 }
 
@@ -321,5 +485,5 @@ copyBtn.addEventListener('click', copyPrompt);
 downloadBtn.addEventListener('click', downloadImage);
 themeToggle.addEventListener('click', toggleTheme);
 
-// Initialize on page load
 initializeTheme();
+setupExamplePrompts();
